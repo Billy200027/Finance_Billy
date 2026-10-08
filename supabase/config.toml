@@ -1,0 +1,4 @@
+[functions.finance-api]
+verify_jwt = false
+# Login y registro son públicos. Las acciones privadas validan el JWT con Auth getUser,
+# el estado del miembro y el rol antes de ejecutar la transacción del servidor.
