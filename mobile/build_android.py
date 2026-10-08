@@ -35,7 +35,7 @@ android {
     'app/src/main/res/values/styles.xml': '''<resources><style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
   <item name="android:fontFamily">sans</item><item name="android:colorAccent">#6f1d36</item>
   <item name="android:statusBarColor">#6f1d36</item><item name="android:navigationBarColor">#6f1d36</item>
-  <item name="android:windowLightStatusBar">false</item><item name="android:windowLightNavigationBar">false</item>
+  <item name="android:windowLightStatusBar">false</item>
   <item name="android:windowBackground">#6f1d36</item>
 </style></resources>
 ''',
@@ -126,11 +126,6 @@ public class MainActivity extends Activity {
                     .setMessage("Finance Billy necesita internet. Revisa tu conexión e intenta de nuevo.")
                     .setPositiveButton("Reintentar", (d, w) -> web.loadUrl(HOME))
                     .setNegativeButton("Cerrar", (d, w) -> finish()).show();
-            }
-            @Override public void onPageFinished(WebView view, String url) {
-                if (!trusted(Uri.parse(url))) return;
-                // Only exports created by this app; native file picker chooses the destination.
-                view.evaluateJavascript("(function(){if(window.fbExportHook)return;window.fbExportHook=true;document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[download]');if(!a||!a.href.startsWith('blob:')||!a.download.endsWith('.json'))return;e.preventDefault();fetch(a.href).then(function(r){return r.text()}).then(function(t){FinanceExport.saveJson(t)}).catch(function(){alert('No se pudo exportar. Intenta de nuevo.');});},true);})();", null);
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
