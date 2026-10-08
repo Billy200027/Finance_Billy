@@ -4,3 +4,8 @@ node_modules/
 private*/
 *session*.json
 *admin*.json
+
+android-project/
+entrega/
+*.jks
+*.keystore
