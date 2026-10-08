@@ -1,0 +1,38 @@
+name: Compilar APK de prueba
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Preparar proyecto Android
+        run: python3 mobile/build_android.py
+      - name: Compilar y revisar Android
+        run: |
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+          gradle -p android-project wrapper --gradle-version 8.13
+          gradle -p android-project assembleDebug lintDebug --no-daemon
+      - name: Preparar entrega
+        run: |
+          mkdir -p entrega
+          cp android-project/app/build/outputs/apk/debug/app-debug.apk entrega/Finance-Billy-prueba.apk
+          cp mobile/ANDROID.md entrega/LEEME.md
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs entrega/Finance-Billy-prueba.apk > entrega/FIRMA.txt
+          zip -qr entrega/Finance-Billy-Android-codigo.zip android-project -x '*/build/*' '*/.gradle/*' '*/local.properties'
+          sha256sum entrega/Finance-Billy-prueba.apk > entrega/SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Finance-Billy-Android-prueba
+          path: entrega/
+          retention-days: 30
