@@ -9,8 +9,8 @@ No tiene planes, aportaciones, retornos ni pasarela de pagos. Las operaciones mo
 - Base de datos desplegada en el esquema privado `finance_billy` de Supabase.
 - Función `finance-api` desplegada y autenticación del administrador comprobada.
 - Cinco ciclos de pruebas de lógica y base de datos, con corrección de defectos; datos ficticios revertidos en cada batería.
-- Publicación en GitHub Pages en preparación. Los permisos de las cuatro tablas antiguas se cerraron, conservando sus datos.
-- Verificación visual móvil/escritorio y registro completo por la interfaz PENDIENTES hasta disponer de una URL de revisión.
+- Publicada: https://billy200027.github.io/Finance_Billy/ — despliegue de GitHub Pages comprobado. Los permisos de las cuatro tablas antiguas se cerraron, conservando sus datos.
+- Pantallas públicas de acceso y registro revisadas visualmente en escritorio; catálogo de bancos cargado desde Supabase. La revisión móvil y el recorrido completo de registro/panel por navegador siguen pendientes.
 - Avisos automáticos por correo NO configurados: falta remitente y autorización de un servicio de correo. El panel muestra comprobantes pendientes y la operativa no depende del correo.
 
 ## Arquitectura
