@@ -16,9 +16,14 @@
 
 Casos de integración: registro, duplicación, aprobación, privacidad del pendiente, permisos de administrador, RLS, RPC inaccesible para cliente, activación, doble aprobación, compra de puntos, límite de 168 h, snapshot, una solicitud, FIFO, desembolso, centavos, calendario, pagos complementarios, fecha efectiva, conciliación de aprobación tardía, liquidación lunes/martes, noticias privadas, configuración no retroactiva, recibo ajeno, penalizaciones independientes, conciliación repetida, piso 0, recuperación sin deuda oculta y mantenimiento.
 
+## Publicación y revisión pública
+
+- GitHub Pages: workflow completado con Success. URL publicada: https://billy200027.github.io/Finance_Billy/
+- Acceso y formulario de registro revisados en escritorio. Tipografía local y color vino cargados. Catálogo real de bancos visible. Sin errores propios de la aplicación en la consola observada. No se enviaron datos de registro ni se efectuaron operaciones monetarias.
+
 ## Pendientes explícitos
 
-- QA visual y flujo completo por navegador: no probado todavía.
+- QA visual móvil y flujo completo autenticado por navegador: pendientes.
 - Registro y cambio de clave de un miembro real por HTTP: no probado; la prueba que iba a crear cuentas persistentes fue bloqueada y se sustituyó por pruebas transaccionales reversibles. No se creó esa cuenta de prueba.
 - Carga/concurrencia masiva: no probada. Escrituras serializadas en transacciones con advisory lock e idempotencia.
 - Restauración completa de backups externos y SMTP: no probados/configurados.
