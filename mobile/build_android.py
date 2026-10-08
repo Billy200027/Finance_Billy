@@ -12,7 +12,7 @@ rootProject.name = 'FinanceBilly'
 include ':app'
 ''',
     'build.gradle': "plugins { id 'com.android.application' version '8.13.2' apply false; id 'com.google.gms.google-services' version '4.5.0' apply false }\n",
-    'gradle.properties': 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\n',
+    'gradle.properties': 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\nandroid.useAndroidX=true\n',
     'app/build.gradle': '''plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
 android {
     namespace 'com.billy.finance'
