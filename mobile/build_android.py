@@ -1,6 +1,7 @@
 """Generate the reproducible Android project. No credentials or native SDK required here."""
 from pathlib import Path
 import shutil
+import json
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'android-project'
@@ -10,21 +11,23 @@ dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_P
 rootProject.name = 'FinanceBilly'
 include ':app'
 ''',
-    'build.gradle': "plugins { id 'com.android.application' version '8.13.2' apply false }\n",
-    'gradle.properties': 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\n',
-    'app/build.gradle': '''plugins { id 'com.android.application' }
+    'build.gradle': "plugins { id 'com.android.application' version '8.13.2' apply false; id 'com.google.gms.google-services' version '4.5.0' apply false }\n",
+    'gradle.properties': 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\nandroid.useAndroidX=true\n',
+    'app/build.gradle': '''plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
 android {
     namespace 'com.billy.finance'
     compileSdk 35
-    defaultConfig { applicationId 'com.billy.finance'; minSdk 26; targetSdk 35; versionCode 1; versionName '3.1.1-prueba' }
+    defaultConfig { applicationId 'com.billy.finance'; minSdk 26; targetSdk 35; versionCode 2; versionName '3.1.2-push-prueba' }
     buildTypes { release { minifyEnabled false } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 ''',
     'app/src/main/AndroidManifest.xml': '''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <application android:label="Finance Billy" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
     android:theme="@style/AppTheme" android:allowBackup="false" android:usesCleartextTraffic="false">
+    <service android:name=".FinancePushService" android:exported="false"><intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT"/></intent-filter></service>
     <activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize"
       android:configChanges="orientation|screenSize|keyboardHidden">
       <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
@@ -74,6 +77,8 @@ public class MainActivity extends Activity {
     private static final String HOME = "https://billy200027.github.io/Finance_Billy/";
     private static final int PICK_IMAGE = 10, SAVE_JSON = 11, MAX_BYTES = 5 * 1024 * 1024;
     private WebView web;
+    private PushBridge push;
+    private String pendingPage;
     private ValueCallback<Uri[]> imageCallback;
     private String exportJson;
 
@@ -110,7 +115,10 @@ public class MainActivity extends Activity {
         s.setSupportMultipleWindows(false);
         s.setJavaScriptCanOpenWindowsAutomatically(false);
         web.addJavascriptInterface(new ExportBridge(), "FinanceExport");
+        push=new PushBridge(this); web.addJavascriptInterface(push,"FinancePush");
+        pendingPage=getIntent().getStringExtra("finance_page");
         web.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView view,String url) { pushChanged(); }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if (trusted(request.getUrl())) return false;
                 if (request.isForMainFrame() && ("https".equals(request.getUrl().getScheme())
@@ -144,6 +152,23 @@ public class MainActivity extends Activity {
         });
         web.setDownloadListener((url, agent, disposition, mime, length) -> note("Utiliza Exportar registros JSON para guardar el respaldo."));
         web.loadUrl(HOME);
+    }
+
+    public void pushChanged() {
+        runOnUiThread(()->{if(web!=null && web.getUrl()!=null && trusted(Uri.parse(web.getUrl()))) {
+            if(pendingPage!=null) {
+                web.evaluateJavascript("window.__financePushPage="+org.json.JSONObject.quote(pendingPage)+";",null);
+                pendingPage=null;
+            }
+            web.evaluateJavascript("window.dispatchEvent(new Event('finance-push-change'));",null);
+        }});
+    }
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);setIntent(intent);pendingPage=intent.getStringExtra("finance_page");pushChanged();
+    }
+    @Override protected void onResume() { super.onResume(); if(push!=null)pushChanged(); }
+    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grants) {
+        super.onRequestPermissionsResult(request,permissions,grants);if(request==12)pushChanged();
     }
 
     private boolean validImage(Uri uri) {
@@ -208,12 +233,22 @@ public class MainActivity extends Activity {
     }
     @Override public void onDestroy() {
         if (imageCallback != null) imageCallback.onReceiveValue(null);
-        exportJson = null; web.removeJavascriptInterface("FinanceExport"); web.destroy(); super.onDestroy();
+        exportJson = null; web.removeJavascriptInterface("FinanceExport"); web.removeJavascriptInterface("FinancePush"); web.destroy(); super.onDestroy();
     }
 }
 ''',
 }
 
+FILES['app/build.gradle'] += "\ndependencies { implementation platform('com.google.firebase:firebase-bom:34.19.0'); implementation 'com.google.firebase:firebase-messaging' }\n"
+FILES['app/src/main/res/drawable/ic_notification.xml'] = '<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M5,4h14v3H8v4h9v3H8v6H5z"/></vector>'
+for java in ['PushBridge.java','FinancePushService.java']:
+    FILES['app/src/main/java/com/billy/finance/'+java]=(ROOT/'mobile'/java).read_text()
+config=ROOT/'mobile/google-services.json'
+if not config.exists():
+    raise SystemExit('Falta mobile/google-services.json: descarga la configuración Android de Firebase. No uses el JSON de cuenta de servicio.')
+client_config=json.loads(config.read_text())
+if client_config['project_info']['project_id']!='finance-billy-notificaciones' or not any(c['client_info']['android_client_info']['package_name']=='com.billy.finance' for c in client_config['client']):
+    raise SystemExit('Configuración Firebase de otro proyecto o paquete')
 for relative, contents in FILES.items():
     target = OUT / relative
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -222,5 +257,6 @@ for relative in ['app/src/main/res/mipmap-mdpi/ic_launcher.png', 'app/src/main/r
     target = OUT / relative
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ROOT / 'app-icon-512.png', target)
+shutil.copyfile(config, OUT/'app/google-services.json')
 shutil.copyfile(ROOT / 'fonts/OFL.txt', OUT / 'FONT-LICENSE.txt')
 print(f'Android project generated: {OUT}')

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "812593403301",
+    "project_id": "finance-billy-notificaciones",
+    "storage_bucket": "finance-billy-notificaciones.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:812593403301:android:56f14ff58604181e04044c",
+        "android_client_info": {
+          "package_name": "com.billy.finance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBeJHqbANc9iOOA45syomKmjEzYiQ6N3j0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

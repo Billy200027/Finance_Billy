@@ -23,7 +23,16 @@ La firma de esta primera APK es de depuración: úsala para pruebas. No es una v
 - Navegación externa fuera de la aplicación, HTTPS obligatorio y copias de seguridad Android desactivadas.
 - Botones/menús sin selección accidental; noticias, tablas e información bancaria copiables. Esto es presentación, no protección contra capturas o extracción de datos.
 
-Las mejoras de la web se reflejan al abrir la APK o pulsar Actualizar. Un cambio del código nativo necesita otra compilación. No ofrece funcionamiento financiero sin conexión, notificaciones push ni captura directa desde la cámara.
+Las mejoras de la web se reflejan al abrir la APK o pulsar Actualizar. Un cambio del código nativo necesita otra compilación. Incluye notificaciones push opcionales con Firebase Cloud Messaging. No ofrece funcionamiento financiero sin conexión ni captura directa desde la cámara.
+
+## Activar notificaciones
+
+1. Instala esta nueva APK, inicia sesión y pulsa **Notificaciones** junto a **Actualizar**.
+2. Pulsa **Activar** y acepta el permiso de Android.
+3. Noticias publicadas: aviso a miembros aprobados; solicitudes y comprobantes: solo administrador; préstamo aprobado: solo solicitante.
+4. Al cerrar sesión se desconecta el dispositivo. Al cambiar de cuenta hay que activar nuevamente.
+
+Necesita Google Play Services y conexión. Los avisos pueden demorarse aproximadamente un minuto más el tiempo de entrega de Android. Forzar la detención de la app puede impedir avisos hasta abrirla de nuevo. La recepción en un teléfono real aún debe probarse.
 
 ## Compilar sin Visual Studio Code
 
