@@ -40,7 +40,8 @@ Deno.serve(async(req:Request)=>{
  if(!claims.session_id||!await call('/rest/v1/rpc/finance_session_valid',{p_user:user.id,p_session:claims.session_id}))return respond({error:'Sesión revocada. Vuelve a iniciar sesión.'},401);
  const {member}=await rpc(user.id,'status');
  if(member.status==='BLOQUEADA')return respond({error:'La cuenta está bloqueada'},403);
- if(action==='logout'){await call('/auth/v1/logout?scope=local',undefined,'POST',token);return respond({ok:true});}
+ if(action==='push_device'){return respond(await call('/rest/v1/rpc/finance_push_device',{p_user:user.id,p_session:claims.session_id,p_device:data.device,p_binding:data.binding||null,p_token:data.token||null,p_enabled:data.enabled===true}));}
+ if(action==='logout'){await call('/rest/v1/rpc/finance_push_device',{p_user:user.id,p_session:claims.session_id,p_device:data.device||null,p_binding:null,p_token:null,p_enabled:false});await call('/auth/v1/logout?scope=local',undefined,'POST',token);return respond({ok:true});}
  if(action==='change_password'){
  if(String(data.password||'').length<10)throw Error('La nueva contraseña necesita al menos 10 caracteres');
  await call('/auth/v1/user',{password:data.password},'PUT',token);await rpc(user.id,'password_changed',{},key);return respond({ok:true});
