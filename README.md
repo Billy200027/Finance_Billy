@@ -66,3 +66,13 @@ La exportación JSON del panel es una copia administrativa de registros, no un r
 ## Límites
 
 Concilia períodos omitidos antes de consultar o modificar datos; no requiere que una tarea nocturna haya corrido. Las consultas de estado devuelven el historial del miembro, o el conjunto de registros al administrador; para un volumen elevado habrá que incorporar paginación y probar capacidad. No se ha realizado una prueba de carga de cientos de usuarios. Los datos del proyecto anterior se mantienen; sus tablas ya no permiten acceso a los roles anon ni authenticated.
+
+## Resumen administrativo y ajustes del propietario
+
+`supabase/summary.sql` es una extensión incremental de instalación única sobre el esquema instalado. Conserva el RPC vigente, sus permisos y los registros originales. Desplegar después `finance-api` con la acción `admin_summary` habilitada.
+
+En Inicio, Operaciones registradas separa egresos, ingresos y ganancias cobradas. Solo el propietario original puede registrar movimientos externos, descontar importes, establecer un total exacto o revertir ajustes. Cada movimiento conserva motivo, autor, fecha y clave de idempotencia; las reversiones añaden el contrario sin borrar el historial. Los nuevos cobros y desembolsos siguen sumándose. El total exacto se calcula en servidor bajo el bloqueo transaccional existente. Los ajustes no modifican préstamos, cuotas ni comprobantes.
+
+La ganancia neta registrada suma intereses cobrados, activaciones, puntos y otras ganancias, menos gastos registrados. Capital entregado, capital devuelto y retiros personales no son ganancias ni gastos del negocio. Los pagos parciales distribuyen el cobro proporcionalmente entre capital e interés, redondeando una vez por cuota. Para préstamos liquidados, el interés real es el total cobrado por cuotas y liquidación menos el capital inicial; no se incluyen intereses futuros perdonados. El resumen no representa saldo bancario ni incluye gastos todavía no registrados.
+
+Registrar un préstamo externo: movimiento de capital entregado; al cobrar, registrar por separado capital recibido e interés cobrado. Un ajuste exacto de ingresos/egresos no cambia ganancias; para corregir estas, ajustar su concepto específico. `npm test` verifica los cálculos y `tests/summary.sql` comprueba autorización, reversiones e integridad en una transacción revertida. El APK carga la URL pública de GitHub Pages y recibe estos cambios al reabrirla.

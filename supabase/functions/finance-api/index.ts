@@ -7,7 +7,7 @@ const rpc=(user:string|null,action:string,data={},key:string|null=null)=>call('/
 async function digest(v:string){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)))].map(x=>x.toString(16).padStart(2,'0')).join('');}
 const internalEmail=async(id:string)=>(await digest('finance-billy:'+id))+'@finance-billy.invalid';
 const ids=(s:unknown)=>String(s??'').replace(/\s/g,'');
-const actions=new Set(['state','status','request','cancel_request','quote','admin_request','admin_disburse','admin_receipt','admin_member','admin_points','profile','admin_news','admin_bank','admin_settings','admin_correct_date']);
+const actions=new Set(['state','status','request','cancel_request','quote','admin_request','admin_disburse','admin_receipt','admin_member','admin_points','profile','admin_news','admin_bank','admin_settings','admin_correct_date','admin_summary']);
 Deno.serve(async(req:Request)=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:cors});
  const respond=(j:unknown,status=200)=>new Response(JSON.stringify(j),{status,headers:cors});
