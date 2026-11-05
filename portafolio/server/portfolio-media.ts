@@ -17,11 +17,22 @@ Deno.serve(async req=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:C});
  try{
  if(req.method==='GET'){
- const rows=await call('/rest/v1/portfolio_media?select=id,app_slug,kind,object_path,caption,sort_order,created_at&order=sort_order.asc,created_at.asc&limit=1000');
+ const rows=await call('/rest/v1/portfolio_media?select=id,app_slug,kind,object_path,caption,sort_order,created_at&deleted_at=is.null&order=sort_order.asc,created_at.asc&limit=1000');
  return reply({media:rows.map(row=>({...row,url:BASE+'/storage/v1/object/public/portfolio-public/'+row.object_path}))});
  }
  if(req.method!=='POST')return reply({error:'Método no permitido'},405);
  try{await admin(req);}catch{return reply({error:'Acceso reservado al administrador. Inicia sesión de nuevo.'},401);}
+
+ if(req.headers.get('content-type')?.startsWith('application/json')){
+ const data=await req.json();
+ if(data.action==='admin-list'){const rows=await call('/rest/v1/portfolio_media?select=id,app_slug,kind,object_path,caption,sort_order,created_at,deleted_at&order=sort_order.asc,created_at.asc&limit=1000');return reply({media:rows.map(row=>({...row,url:BASE+'/storage/v1/object/public/portfolio-public/'+row.object_path}))});}
+ if(!['remove','restore'].includes(data.action)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id||''))return reply({error:'Acción o archivo inválido'},400);
+ const response=await fetch(BASE+'/rest/v1/portfolio_media?id=eq.'+data.id,{method:'PATCH',headers:{...H,Prefer:'return=representation'},body:JSON.stringify({deleted_at:data.action==='remove'?new Date().toISOString():null})});
+ const rows=await response.json().catch(()=>null);
+ if(!response.ok||!Array.isArray(rows))return reply({error:'No se pudo actualizar el archivo'},502);
+ if(rows.length!==1)return reply({error:'El archivo ya no está disponible'},404);
+ return reply({ok:true,removed:data.action==='remove'});
+ }
  if(Number(req.headers.get('content-length')||0)>44040192)return reply({error:'Máximo 40 MB por archivo'},413);
  if(!req.headers.get('content-type')?.startsWith('multipart/form-data'))return reply({error:'Selecciona un archivo'},400);
  const form=await req.formData(),file=form.get('file'),slug=String(form.get('slug')||''),kind=String(form.get('kind')||'');

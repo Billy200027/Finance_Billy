@@ -1,0 +1,1 @@
+alter table public.portfolio_media add column deleted_at timestamptz; alter policy portfolio_media_public_read on public.portfolio_media using (deleted_at is null);
