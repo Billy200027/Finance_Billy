@@ -29,11 +29,13 @@ function render(slug){
  const link=document.createElement('a');link.href=apk.url+'?download='+encodeURIComponent(slug+'.apk');link.className='bm-secondary';link.textContent='Descargar APK';link.setAttribute('download',slug+'.apk');link.dataset.cloudApk='true';actions.append(link);
  if(slug==='finance-billy'){const note=document.querySelector('#bm-detail .bm-detail-note');if(note)note.textContent='Puedes abrir la web y descargar el APK. El acceso a las funciones requiere una cuenta aprobada por el administrador.';}}
 }
-function current(){const hash=location.hash;return hash.startsWith('#app/')?hash.slice(5):null;}
+function canonicalSlug(slug){return slug==='quadro-app'?'cuadros-app':slug;}
+function normalizeMedia(rows){return rows.map(row=>({...row,app_slug:canonicalSlug(row.app_slug)}));}
+function current(){const hash=location.hash;return hash.startsWith('#app/')?canonicalSlug(hash.slice(5)):null;}
 window.BMPortfolioMedia={render};
 async function load(){
  const response=await fetch(ENDPOINT,{cache:'no-store'});const data=await response.json();if(!response.ok||!Array.isArray(data.media))throw Error('No se pudieron cargar los archivos');
- media=data.media;
+ media=normalizeMedia(data.media);
  cards.forEach(card=>{const slug=card.getAttribute('href').split('/').pop(),logo=newest(media.filter(x=>x.app_slug===slug&&x.kind==='logo'));if(logo)image(card.querySelector('.bm-icon'),logo.url,'Logotipo de la aplicación');else card.querySelector('.bm-icon').innerHTML=originalIcons.get(slug)||'';});
  if(current())render(current());
  if(session)await refreshAdmin();
@@ -64,7 +66,7 @@ async function management(action,id){
  const response=await fetch(ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json'},body:JSON.stringify({action,...(id?{id}:{})})});
  const data=await response.json();if(!response.ok)throw Error(data.error||'No se pudo actualizar la lista');return data;
 }
-async function refreshAdmin(){const data=await management('admin-list');adminMedia=data.media;renderAdmin();}
+async function refreshAdmin(){const data=await management('admin-list');adminMedia=normalizeMedia(data.media);renderAdmin();}
 function renderAdmin(){
  const list=byId('bm-media-list');list.replaceChildren();
  const files=adminMedia.filter(item=>item.app_slug===selector.value);
