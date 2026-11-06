@@ -13,6 +13,27 @@ async function admin(req){
  if(result.member?.role!=='ADMIN'||result.member?.status!=='APROBADA'||result.member?.force_password)throw Error('Solo el administrador puede publicar archivos');
  return user;
 }
+
+const isUuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
+const isIdeaId=value=>Number.isSafeInteger(value)&&value>0;
+const ideaRpc=(name,data)=>call('/rest/v1/rpc/'+name,'POST',data);
+async function publicIdeas(data){
+  if(!isUuid(data.browser))return reply({error:'No se pudo identificar este navegador. Recarga la página.'},400);
+  if(data.action==='ideas-list'){
+    if(data.before!=null&&!isIdeaId(data.before))return reply({error:'Página inválida'},400);
+    return reply({ideas:await ideaRpc('portfolio_ideas_list',{p_browser:data.browser,p_before:data.before??null})});
+  }
+  if(data.action==='ideas-publish'){
+    const body=typeof data.body==='string'?data.body.trim():'';
+    if(!body||Array.from(body).length>4000||body.includes('\u0000')||!isUuid(data.request))return reply({error:'Escribe una idea de entre 1 y 4.000 caracteres.'},400);
+    const result=await ideaRpc('portfolio_idea_publish',{p_browser:data.browser,p_request:data.request,p_body:body});
+    if(result.limited)return reply({error:'Ya publicaste tres ideas en las últimas 24 horas. Vuelve a intentarlo más tarde.'},429);
+    return reply(result,201);
+  }
+  if(!isIdeaId(data.id)||typeof data.liked!=='boolean')return reply({error:'Voto inválido'},400);
+  const result=await ideaRpc('portfolio_idea_vote',{p_idea:data.id,p_browser:data.browser,p_liked:data.liked});
+  return result.missing?reply({error:'Esta idea ya no está publicada.'},404):reply(result);
+}
 Deno.serve(async req=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:C});
  try{
@@ -21,10 +42,24 @@ Deno.serve(async req=>{
  return reply({media:rows.map(row=>({...row,url:BASE+'/storage/v1/object/public/portfolio-public/'+row.object_path}))});
  }
  if(req.method!=='POST')return reply({error:'Método no permitido'},405);
+ const isJson=req.headers.get('content-type')?.startsWith('application/json');
+ let data;
+ if(isJson){
+   if(Number(req.headers.get('content-length')||0)>32768)return reply({error:'Solicitud demasiado larga'},413);
+   const raw=await req.text();
+   if(raw.length>32768)return reply({error:'Solicitud demasiado larga'},413);
+   try{data=JSON.parse(raw);}catch{return reply({error:'Solicitud inválida'},400);}
+   if(!data||typeof data!=='object'||Array.isArray(data))return reply({error:'Solicitud inválida'},400);
+   if(['ideas-list','ideas-publish','ideas-vote'].includes(data.action))return await publicIdeas(data);
+ }
  try{await admin(req);}catch{return reply({error:'Acceso reservado al administrador. Inicia sesión de nuevo.'},401);}
 
- if(req.headers.get('content-type')?.startsWith('application/json')){
- const data=await req.json();
+ if(isJson){
+ if(data.action==='ideas-hide'){
+   if(!isIdeaId(data.id))return reply({error:'Idea inválida'},400);
+   await call('/rest/v1/portfolio_ideas?id=eq.'+data.id+'&hidden_at=is.null','PATCH',{hidden_at:new Date().toISOString()});
+   return reply({ok:true});
+ }
  if(data.action==='admin-list'){const rows=await call('/rest/v1/portfolio_media?select=id,app_slug,kind,object_path,caption,sort_order,created_at,deleted_at&order=sort_order.asc,created_at.asc&limit=1000');return reply({media:rows.map(row=>({...row,url:BASE+'/storage/v1/object/public/portfolio-public/'+row.object_path}))});}
  if(!['remove','restore'].includes(data.action)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id||''))return reply({error:'Acción o archivo inválido'},400);
  const response=await fetch(BASE+'/rest/v1/portfolio_media?id=eq.'+data.id,{method:'PATCH',headers:{...H,Prefer:'return=representation'},body:JSON.stringify({deleted_at:data.action==='remove'?new Date().toISOString():null})});

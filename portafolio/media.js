@@ -35,7 +35,7 @@ function render(slug){
 function canonicalSlug(slug){return slug==='quadro-app'?'cuadros-app':slug;}
 function normalizeMedia(rows){return rows.map(row=>({...row,app_slug:canonicalSlug(row.app_slug)}));}
 function current(){const hash=location.hash;return hash.startsWith('#app/')?canonicalSlug(hash.slice(5)):null;}
-window.BMPortfolioMedia={render};
+window.BMPortfolioMedia={render,isAdmin:()=>!!session,adminToken:token};
 async function load(){
  const response=await fetch(ENDPOINT,{cache:'no-store'});const data=await response.json();if(!response.ok||!Array.isArray(data.media))throw Error('No se pudieron cargar los archivos');
  media=normalizeMedia(data.media);
