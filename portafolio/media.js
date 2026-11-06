@@ -23,8 +23,11 @@ function render(slug){
  const logo=newest(rows.filter(x=>x.kind==='logo'));
  if(logo)image(byId('bm-detail-icon'),logo.url,'Logotipo de la aplicación');else byId('bm-detail-icon').innerHTML=originalIcons.get(slug)||'';
  const actions=document.querySelector('#bm-detail .bm-actions');actions.querySelector('[data-cloud-apk]')?.remove();
- const apk=newest(rows.filter(x=>x.kind==='apk'));
- if(!apk){if(!Array.from(actions.querySelectorAll('button')).some(b=>b.textContent.includes('APK'))){const pending=document.createElement('button');pending.type='button';pending.disabled=true;pending.className='bm-secondary';pending.textContent='APK · próximamente';actions.append(pending);}if(slug==='finance-billy'){const note=document.querySelector('#bm-detail .bm-detail-note');if(note)note.textContent='Puedes abrir la web y solicitar una cuenta. El acceso a las funciones requiere aprobación del administrador.';}}
+ const bundledApk=actions.querySelector('[data-bundled-apk]');
+ const previousCuadrosApk='quadro-app/apk/1d62496e-b026-4525-9887-65cd05554591.apk';
+ const apk=newest(rows.filter(x=>x.kind==='apk'&&(!bundledApk||x.object_path!==previousCuadrosApk)));
+ if(bundledApk)bundledApk.hidden=!!apk;
+ if(!apk){if(!bundledApk&&!Array.from(actions.querySelectorAll('button')).some(b=>b.textContent.includes('APK'))){const pending=document.createElement('button');pending.type='button';pending.disabled=true;pending.className='bm-secondary';pending.textContent='APK · próximamente';actions.append(pending);}if(slug==='finance-billy'){const note=document.querySelector('#bm-detail .bm-detail-note');if(note)note.textContent='Puedes abrir la web y solicitar una cuenta. El acceso a las funciones requiere aprobación del administrador.';}}
  if(apk){actions.querySelectorAll('button').forEach(b=>{if(b.textContent.includes('APK'))b.remove();});
  const link=document.createElement('a');link.href=apk.url+'?download='+encodeURIComponent(slug+'.apk');link.className='bm-secondary';link.textContent='Descargar APK';link.setAttribute('download',slug+'.apk');link.dataset.cloudApk='true';actions.append(link);
  if(slug==='finance-billy'){const note=document.querySelector('#bm-detail .bm-detail-note');if(note)note.textContent='Puedes abrir la web y descargar el APK. El acceso a las funciones requiere una cuenta aprobada por el administrador.';}}
