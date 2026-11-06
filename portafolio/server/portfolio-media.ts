@@ -34,12 +34,54 @@ async function publicIdeas(data){
   const result=await ideaRpc('portfolio_idea_vote',{p_idea:data.id,p_browser:data.browser,p_liked:data.liked});
   return result.missing?reply({error:'Esta idea ya no está publicada.'},404):reply(result);
 }
+
+const APK_PART_BYTES=32*1024*1024;
+const APK_SMALL_LIMIT=40*1024*1024;
+const APK_LIMIT=100*1024*1024;
+const bucketUrl=BASE+'/storage/v1/object/portfolio-public/';
+const publicBucketUrl=BASE+'/storage/v1/object/public/portfolio-public/';
+const validSlug=slug=>typeof slug==='string'&&/^[a-z][a-z0-9-]{0,79}$/.test(slug);
+const validSplitSize=size=>Number.isInteger(size)&&size>APK_SMALL_LIMIT&&size<=APK_LIMIT;
+const apkPath=(slug,upload)=>slug+'/apk/'+upload+'.apk';
+const partPath=(path,part)=>path+'.part-'+part+'.apk';
+function mediaItem(row){
+  if(!row.apk_size_bytes)return {...row,url:publicBucketUrl+row.object_path};
+  const parts=Array.from({length:Math.ceil(row.apk_size_bytes/APK_PART_BYTES)},(_,part)=>({
+    url:publicBucketUrl+partPath(row.object_path,part),
+    size:Math.min(APK_PART_BYTES,row.apk_size_bytes-part*APK_PART_BYTES)
+  }));
+  return {...row,parts};
+}
+async function uploadApkPart(form,file,slug){
+  const upload=form.get('upload'),size=Number(form.get('size')),part=Number(form.get('part'));
+  if(!validSlug(slug)||!isUuid(upload)||!validSplitSize(size)||form.get('part')===null
+     ||!Number.isInteger(part)||part<0||part>=Math.ceil(size/APK_PART_BYTES)
+     ||!(file instanceof File)||!file.name.toLowerCase().endsWith('.apk')
+     ||file.size!==Math.min(APK_PART_BYTES,size-part*APK_PART_BYTES)){
+    return reply({error:'Parte del APK inválida'},400);
+  }
+  if(part===0){
+    const bytes=new Uint8Array(await file.slice(0,4).arrayBuffer());
+    if(bytes[0]!==80||bytes[1]!==75||bytes[2]!==3||bytes[3]!==4)return reply({error:'Selecciona un APK válido'},400);
+  }
+  const path=partPath(apkPath(slug,upload),part);
+  const response=await fetch(bucketUrl+path,{
+    method:'POST',headers:{...H,'Content-Type':'application/vnd.android.package-archive','x-upsert':'false','Cache-Control':'public,max-age=31536000'},body:file
+  });
+  if(!response.ok){
+    const error=await response.json().catch(()=>null);
+    if(response.status!==409&&String(error?.statusCode)!=='409'){
+      return reply({error:'No se pudo guardar esta parte del APK. Reintenta la subida.'},502);
+    }
+  }
+  return reply({ok:true},201);
+}
 Deno.serve(async req=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:C});
  try{
  if(req.method==='GET'){
- const rows=await call('/rest/v1/portfolio_media?select=id,app_slug,kind,object_path,caption,sort_order,created_at&deleted_at=is.null&order=sort_order.asc,created_at.asc&limit=1000');
- return reply({media:rows.map(row=>({...row,url:BASE+'/storage/v1/object/public/portfolio-public/'+row.object_path}))});
+ const rows=await call('/rest/v1/portfolio_media?select=id,app_slug,kind,object_path,caption,sort_order,created_at,apk_size_bytes&deleted_at=is.null&order=sort_order.asc,created_at.asc&limit=1000');
+ return reply({media:rows.map(mediaItem)});
  }
  if(req.method!=='POST')return reply({error:'Método no permitido'},405);
  const isJson=req.headers.get('content-type')?.startsWith('application/json');
@@ -55,12 +97,21 @@ Deno.serve(async req=>{
  try{await admin(req);}catch{return reply({error:'Acceso reservado al administrador. Inicia sesión de nuevo.'},401);}
 
  if(isJson){
+ if(data.action==='apk-complete'){
+   if(!validSlug(data.slug)||!isUuid(data.upload)||!validSplitSize(data.size))return reply({error:'APK inválido'},400);
+   const id=await ideaRpc('portfolio_publish_split_apk',{
+     p_slug:data.slug,p_upload:data.upload,p_size:data.size,
+     p_caption:String(data.caption||'').slice(0,200),
+     p_position:Number.isInteger(data.position)&&data.position>=0&&data.position<=1000000?data.position:0
+   });
+   return id?reply({ok:true,id},201):reply({error:'Faltan partes del APK. Reintenta la subida.'},409);
+ }
  if(data.action==='ideas-hide'){
    if(!isIdeaId(data.id))return reply({error:'Idea inválida'},400);
    await call('/rest/v1/portfolio_ideas?id=eq.'+data.id+'&hidden_at=is.null','PATCH',{hidden_at:new Date().toISOString()});
    return reply({ok:true});
  }
- if(data.action==='admin-list'){const rows=await call('/rest/v1/portfolio_media?select=id,app_slug,kind,object_path,caption,sort_order,created_at,deleted_at&order=sort_order.asc,created_at.asc&limit=1000');return reply({media:rows.map(row=>({...row,url:BASE+'/storage/v1/object/public/portfolio-public/'+row.object_path}))});}
+ if(data.action==='admin-list'){const rows=await call('/rest/v1/portfolio_media?select=id,app_slug,kind,object_path,caption,sort_order,created_at,apk_size_bytes,deleted_at&order=sort_order.asc,created_at.asc&limit=1000');return reply({media:rows.map(mediaItem)});}
  if(!['remove','restore'].includes(data.action)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id||''))return reply({error:'Acción o archivo inválido'},400);
  const response=await fetch(BASE+'/rest/v1/portfolio_media?id=eq.'+data.id,{method:'PATCH',headers:{...H,Prefer:'return=representation'},body:JSON.stringify({deleted_at:data.action==='remove'?new Date().toISOString():null})});
  const rows=await response.json().catch(()=>null);
@@ -71,6 +122,7 @@ Deno.serve(async req=>{
  if(Number(req.headers.get('content-length')||0)>44040192)return reply({error:'Máximo 40 MB por archivo'},413);
  if(!req.headers.get('content-type')?.startsWith('multipart/form-data'))return reply({error:'Selecciona un archivo'},400);
  const form=await req.formData(),file=form.get('file'),slug=String(form.get('slug')||''),kind=String(form.get('kind')||'');
+ if(kind==='apk-part')return await uploadApkPart(form,file,slug);
  if(!/^[a-z][a-z0-9-]{0,79}$/.test(slug)||!['screenshot','logo','apk'].includes(kind))return reply({error:'Aplicación o tipo inválido'},400);
  if(!(file instanceof File)||file.size===0||file.size>41943040)return reply({error:'Usa un archivo de hasta 40 MB'},400);
  const signature=new Uint8Array(await file.slice(0,16).arrayBuffer());let mime='',ext='';
