@@ -1,0 +1,56 @@
+#bm-store .bm-demo {
+  max-width: 740px;
+  margin: 0 0 28px;
+  padding: clamp(16px, 3vw, 25px);
+  border: 1px solid var(--bm-banner-line);
+  border-radius: 14px;
+  background: var(--bm-banner);
+}
+#bm-store .bm-demo p { margin-bottom: 12px; }
+#bm-store .bm-demo-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr));
+  gap: 12px;
+}
+#bm-store .bm-demo label { display: block; font-weight: 600; }
+#bm-store .bm-demo input:not([type="checkbox"], [type="range"]), #bm-store .bm-demo select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 5px;
+  padding: 9px 10px;
+  min-height: 44px;
+  border: 1px solid var(--bm-control-line);
+  border-radius: 8px;
+  background: var(--bm-surface);
+  color: var(--bm-text);
+  font-size: 16px;
+}
+#bm-store .bm-demo input[type="range"] {
+  width: 100%;
+  margin: 6px 0 0;
+  min-height: 36px;
+  accent-color: #ad5775;
+}
+#bm-store .bm-demo .bm-demo-check { align-self: end; padding: 8px 0; }
+#bm-store .bm-demo output { color: var(--bm-accent-text); white-space: nowrap; }
+#bm-store .bm-demo-summary { margin: 16px 0 10px; }
+#bm-store .bm-demo-summary dl { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+#bm-store .bm-demo-summary dl div {
+  flex: 1 1 130px;
+  padding: 8px 11px;
+  border: 1px solid var(--bm-line);
+  border-radius: 8px;
+  background: var(--bm-surface);
+}
+#bm-store .bm-demo-summary dt { font-size: 12px; color: var(--bm-muted); }
+#bm-store .bm-demo-summary dd { margin: 0; font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
+#bm-store .bm-demo-summary dl div:first-child dd { color: var(--bm-accent-text); }
+#bm-store .bm-demo-note { font-size: 12px; }
+#bm-store .bm-demo details summary { cursor: pointer; font-weight: 700; margin-bottom: 8px; }
+#bm-store .bm-demo-table { max-height: 270px; overflow: auto; }
+#bm-store .bm-demo table { width: 100%; border-collapse: collapse; font-size: 13px; }
+#bm-store .bm-demo td, #bm-store .bm-demo th { padding: 7px; border-bottom: 1px solid var(--bm-line); text-align: left; }
+#bm-store .bm-sly-demo { max-width: 420px; }
+#bm-store .bm-sly-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+#bm-store .bm-sly-demo progress { width: 100%; accent-color: #ad5775; }
